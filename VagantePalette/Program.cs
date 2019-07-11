@@ -16,8 +16,11 @@ namespace VagantePalette
             R = c.R;
             G = c.G;
             B = c.B;
+            // Alpha is always 255 in the vagante palette.json
             A = 255;
         }
+
+        // Sort by red -> green -> blue -> alpha
         public int CompareTo(Object o)
         {
             Pixel other = o as Pixel;
@@ -36,11 +39,13 @@ namespace VagantePalette
             return 0;
         }
 
+        // json array element output
         public override string ToString()
         {
             return "[\n    " + R + "," + G + "," + B + "," + A + "\n]";
         }
 
+        // Hexadecimal output
         public string ToHex()
         {
             string str = "#";
@@ -58,6 +63,7 @@ namespace VagantePalette
     }
     class Program
     {
+        // Insert "pixel" in "colors" if it's not already in (colors.Contains didn't work for some reason)
         static void InsertIfNotIn(ICollection<Pixel> colors, Pixel pixel)
         {
             bool to_add = true;
@@ -74,6 +80,7 @@ namespace VagantePalette
         }
 
         // Add the colors found in the images at "path" in "colors"
+        // Return true if the image is 1 pixel high
         static bool LoadColors(string path, ICollection<Pixel> colors)
         {
             Bitmap img = Image.FromFile(path) as Bitmap;
@@ -114,6 +121,7 @@ namespace VagantePalette
             string str_json = "";
             string str_hex = "";
 
+            // Do the first iteration separately to avoid writing one more ","
             WritePixel(0, colors, ref str_json, ref str_hex, palette);
 
             for (int i = 1; i < colors.Count; i++)
@@ -137,6 +145,7 @@ namespace VagantePalette
             string file = path.Split('\\')[1]; // Remove input\
             var colors = new List<Pixel>();
             bool line = LoadColors(path, colors);
+            // Don't sort the image if it's more than 1 line
             if (!line)
                 colors.Sort();
             WriteData(colors, file);
