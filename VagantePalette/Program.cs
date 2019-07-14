@@ -3,9 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace VagantePalette
 {
+    // Collection of classes for containing data from palettes.json
+    public class Palette
+    {
+        [JsonProperty("name")]
+        public string name { get; set; }
+        [JsonProperty("colors")]
+        public IList<IList<int>> colors { get; set; }
+    }
+
+    public class PaletteGroup
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; }
+        [JsonProperty("texture-names")]
+        public IList<string> TextureNames { get; set; }
+        [JsonProperty("palettes")]
+        public IList<Palette> Palettes { get; set; }
+    }
+
+    public class PaletteCollection
+    {
+        [JsonProperty("_comment")]
+        public string Comment { get; set; }
+        [JsonProperty("palette-groups")]
+        public IList<PaletteGroup> PaletteGroups { get; set; }
+    }
+
     // Comparable color class
     class Pixel : IComparable
     {
@@ -176,6 +204,14 @@ namespace VagantePalette
         {
             if (!Directory.Exists("output"))
                 Directory.CreateDirectory("output");
+
+            string jsonPath = "palettes.json";
+            PaletteCollection palette;
+
+            if (File.Exists(jsonPath))
+                palette = JsonConvert.DeserializeObject<PaletteCollection>(jsonPath);
+            else
+                Console.WriteLine("palettes.json not found in directory.");
 
             string[] files = Directory.GetFiles("input");
             foreach (string f in files)
