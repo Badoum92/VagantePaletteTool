@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
 using System.IO;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
 namespace VagantePalette
 {
     // Collection of classes for containing data from palettes.json
-    public class Palette
+    class Palette
     {
         [JsonProperty("name")]
         public string name { get; set; }
@@ -16,7 +17,7 @@ namespace VagantePalette
         public IList<IList<int>> colors { get; set; }
     }
 
-    public class PaletteGroup
+    class PaletteGroup
     {
         [JsonProperty("name")]
         public string Name { get; set; }
@@ -26,7 +27,7 @@ namespace VagantePalette
         public IList<Palette> Palettes { get; set; }
     }
 
-    public class PaletteCollection
+    class PaletteCollection
     {
         [JsonProperty("_comment")]
         public string Comment { get; set; }
@@ -89,8 +90,11 @@ namespace VagantePalette
             return str;
         }
     }
+
     class Program
     {
+        static PaletteCollection palettes;
+
         // Insert "pixel" in "colors" if it's not already in (colors.Contains didn't work for some reason)
         static void InsertIfNotIn(ICollection<Pixel> colors, Pixel pixel)
         {
@@ -130,6 +134,8 @@ namespace VagantePalette
         static void WritePixel(int i, ICollection<Pixel> colors, ref string str_json, ref string str_hex, Bitmap palette)
         {
             Pixel p = colors.ElementAt(i);
+
+
             str_json += p.ToString();
             str_hex += p.ToHex();
             palette.SetPixel(i, 0, Color.FromArgb(p.A, p.R, p.G, p.B));
@@ -158,6 +164,9 @@ namespace VagantePalette
                 str_json += ",";
                 WritePixel(i, colors, ref str_json, ref str_hex, palette);
             }
+
+            // Update the object that's storing palettes.json data
+            UpdatePalettesObject(filename, colors);
 
             string path = "output/" + file + "/" + file;
             File.WriteAllText(path + ".txt", str_json);
@@ -200,16 +209,54 @@ namespace VagantePalette
             Console.WriteLine("Generated output\\" + directory + "\n-----------");
         }
 
+        // Update the palettes.json object with the given palette at the given name
+        static void UpdatePalettesObject(string textureName, ICollection<Pixel> colors)
+        {
+            List<Pixel> colorList = new List<Pixel>(colors);
+
+            for (int i = 0; i < palettes.PaletteGroups.Count; i++)
+            {
+                // If the target texture name is found
+                if (SearchTextureNames(textureName, palettes.PaletteGroups[i]))
+                {
+                    for (int k = 0; k < palettes.PaletteGroups[i].Palettes[0].colors.Count; k++)
+                    {
+                        var temp = new List<int>() { colorList[i].R, colorList[i].G, colorList[i].B, colorList[i].A };
+
+                        palettes.PaletteGroups[i].Palettes[0].colors[i] = temp;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Find the target texture name in the given palette group
+        static bool SearchTextureNames(string targetTexture, PaletteGroup group)
+        {
+            string temp = "";
+
+            string pattern = @"\w*\.png$";
+            Regex rgx = new Regex(pattern, RegexOptions.IgnoreCase);
+
+            for (int i = 0; i < group.TextureNames.Count; i++)
+            {
+                temp = rgx.Match(group.TextureNames[i]).ToString();
+                if (temp == targetTexture)
+                    return true;
+            }
+
+            return false;
+        }
+
         static void Main(string[] args)
         {
             if (!Directory.Exists("output"))
                 Directory.CreateDirectory("output");
 
             string jsonPath = "palettes.json";
-            PaletteCollection palette;
 
             if (File.Exists(jsonPath))
-                palette = JsonConvert.DeserializeObject<PaletteCollection>(jsonPath);
+                palettes = JsonConvert.DeserializeObject<PaletteCollection>(File.ReadAllText(jsonPath));
             else
                 Console.WriteLine("palettes.json not found in directory.");
 
