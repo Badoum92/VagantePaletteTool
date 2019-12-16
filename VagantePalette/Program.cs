@@ -219,11 +219,13 @@ namespace VagantePalette
                 // If the target texture name is found
                 if (SearchTextureNames(textureName, palettes.PaletteGroups[i]))
                 {
-                    for (int k = 0; k < palettes.PaletteGroups[i].Palettes[0].colors.Count; k++)
+                    palettes.PaletteGroups[i].Palettes[0].colors = new List<IList<int>>();
+                    for (int k = 0; k < colorList.Count; k++)
                     {
-                        var temp = new List<int>() { colorList[i].R, colorList[i].G, colorList[i].B, colorList[i].A };
+                        var temp = new List<int>() { colorList[k].R, colorList[k].G, colorList[k].B, colorList[k].A };
 
-                        palettes.PaletteGroups[i].Palettes[0].colors[i] = temp;
+                        // Assign new palette
+                        palettes.PaletteGroups[i].Palettes[0].colors.Add(temp);
                     }
                     break;
                 }
@@ -271,6 +273,9 @@ namespace VagantePalette
             {
                 ProcessDirectory(dir);
             }
+
+            File.WriteAllText(jsonPath, JsonConvert.SerializeObject(palettes, Formatting.Indented));
+            Console.WriteLine("Updated palettes.json.");
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
