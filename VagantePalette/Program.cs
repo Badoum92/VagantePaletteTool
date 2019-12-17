@@ -73,6 +73,7 @@ namespace VagantePalette
                     item += string.Join(",", i);
                     item += "\n\t\t\t\t\t\t],[\n";
                 }
+                item = item.Substring(0, item.LastIndexOf("\t\t\t\t\t\t],[\n"));
                 item += "\t\t\t\t\t\t]\n\t\t\t\t\t]";
 
                 writer.WriteRawValue(item);
@@ -295,6 +296,29 @@ namespace VagantePalette
             return false;
         }
 
+        static void SerializePalettes(string path)
+        {
+            var settings = new JsonSerializerSettings { Formatting = Formatting.Indented, };
+            settings.Converters.Add(new PaletteConverter());
+
+            using (FileStream file = File.Open(path, FileMode.Open))
+            using (StreamWriter streamWriter = new StreamWriter(file))
+            using (JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
+            {
+                Formatting = Formatting.Indented,
+                Indentation = 1,
+                IndentChar = '\t'
+            })
+            {
+
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Converters.Add(new PaletteConverter());
+                serializer.Serialize(jsonWriter, palettes);
+            }
+
+            Console.WriteLine("Updated palettes.json.");
+        }
+
         static void Main(string[] args)
         {
             if (!Directory.Exists("output"))
@@ -319,24 +343,7 @@ namespace VagantePalette
                 ProcessDirectory(dir);
             }
 
-            var settings = new JsonSerializerSettings { Formatting = Formatting.Indented, };
-            settings.Converters.Add(new PaletteConverter());
-
-            using (FileStream file = File.Open(jsonPath, FileMode.Open))
-            using (StreamWriter streamWriter = new StreamWriter(file))
-            using (JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
-            {
-                Formatting = Formatting.Indented,
-                Indentation=1,
-                IndentChar='\t'
-            })
-            {
-
-                JsonSerializer serializer = new JsonSerializer();
-                serializer.Converters.Add(new PaletteConverter());
-                serializer.Serialize(jsonWriter, palettes);
-            }
-            Console.WriteLine("Updated palettes.json.");
+            SerializePalettes(jsonPath);
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
