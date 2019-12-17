@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 
 namespace VagantePalette
 {
+    #region JSON container classes
     // Collection of classes for containing data from palettes.json
     class Palette
     {
@@ -33,6 +34,50 @@ namespace VagantePalette
         public string Comment { get; set; }
         [JsonProperty("palette-groups")]
         public IList<PaletteGroup> PaletteGroups { get; set; }
+    }
+
+    #endregion
+
+    class PaletteConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType == typeof(List<string>) || objectType == typeof(List<IList<int>>);
+        }
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+
+            if (value is List<string>)
+            {
+                var list = (List<string>)value;
+                string item = "";
+                // 4 tabs
+                item += "[\n\t\t\t\t\"";
+                item += string.Join("\",\"", list);
+                item += "\"\n\t\t\t]";
+
+                writer.WriteRawValue(item);
+            }
+            else if (value is List<IList<int>>)
+            {
+                var list = (List<IList<int>>)value;
+                string item = "";
+                item += "[\n\t\t\t\t\t\t[\n";
+                foreach (var i in list)
+                {
+                    item += "\t\t\t\t\t\t\t";
+                    item += string.Join(",", i);
+                    item += "\n\t\t\t\t\t\t],[\n";
+                }
+                item += "\t\t\t\t\t\t]\n\t\t\t\t\t]";
+
+                writer.WriteRawValue(item);
+            }
+        }
     }
 
     // Comparable color class
@@ -274,7 +319,23 @@ namespace VagantePalette
                 ProcessDirectory(dir);
             }
 
-            File.WriteAllText(jsonPath, JsonConvert.SerializeObject(palettes, Formatting.Indented));
+            var settings = new JsonSerializerSettings { Formatting = Formatting.Indented, };
+            settings.Converters.Add(new PaletteConverter());
+
+            using (FileStream file = File.Open(jsonPath, FileMode.Open))
+            using (StreamWriter streamWriter = new StreamWriter(file))
+            using (JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
+            {
+                Formatting = Formatting.Indented,
+                Indentation=1,
+                IndentChar='\t'
+            })
+            {
+
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Converters.Add(new PaletteConverter());
+                serializer.Serialize(jsonWriter, palettes);
+            }
             Console.WriteLine("Updated palettes.json.");
 
             Console.WriteLine("Press any key to exit.");
