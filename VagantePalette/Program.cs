@@ -289,6 +289,8 @@ namespace VagantePalette
         // Update the palettes.json object with the given palette at the given name
         static void UpdatePalettesObject(string textureName, ICollection<Pixel> colors)
         {
+            if (palettes == null) return;
+
             List<Pixel> colorList = new List<Pixel>(colors);
 
             for (int i = 0; i < palettes.PaletteGroups.Count; i++)
@@ -370,7 +372,8 @@ namespace VagantePalette
                 ProcessDirectory(dir);
             }
 
-            SerializePalettes(jsonPath);
+            if (File.Exists(jsonPath))
+                SerializePalettes(jsonPath);
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
