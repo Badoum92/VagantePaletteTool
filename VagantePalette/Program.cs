@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace VagantePalette
 {
@@ -50,7 +51,7 @@ namespace VagantePalette
         }
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-
+            JToken token = JToken.FromObject(value);
             if (value is List<string>)
             {
                 var list = (List<string>)value;
@@ -176,6 +177,19 @@ namespace VagantePalette
             return ret;
         }
 
+        static List<Pixel> LoadPaletteColors(Palette palette)
+        {
+            List<Pixel> pixels = new List<Pixel>();
+
+            foreach (IList<int> color in palette.colors)
+            {
+                Color newColor = Color.FromArgb(color[3], color[0], color[1], color[2]);
+                pixels.Add(new Pixel(newColor));
+            }
+
+            return pixels;
+        }
+
         // Update output data with the color at index i
         static void WritePixel(int i, ICollection<Pixel> colors, ref string str_json, ref string str_hex, Bitmap palette)
         {
@@ -226,11 +240,20 @@ namespace VagantePalette
             Console.WriteLine("Starting file: " + path);
 
             string file = path.Split('\\')[1]; // Remove input\
+
             var colors = new List<Pixel>();
-            bool line = LoadColors(path, colors);
-            // Don't sort the image if it's more than 1 line
-            if (!line)
-                colors.Sort();
+            if (!file.Contains(".json"))
+            {
+                bool line = LoadColors(path, colors);
+                // Don't sort the image if it's more than 1 line
+                if (!line)
+                    colors.Sort();
+            }
+            else
+            {
+                Palette palette = JsonConvert.DeserializeObject<Palette>(File.ReadAllText(path));
+                colors = LoadPaletteColors(palette);
+            }
             WriteData(colors, file);
 
             Console.WriteLine("Generated output\\" + file.Split('.')[0] + "\n-----------"); // Remove the extension
@@ -243,12 +266,20 @@ namespace VagantePalette
 
             string directory = path.Split('\\')[1]; // Remove input\
             var colors = new SortedSet<Pixel>();
+
             var files = Directory.GetFiles(path);
             foreach (string f in files)
             {
-                Console.WriteLine("    - File: " + f);
-                string file = f.Split('\\')[1]; // Remove directory\
-                LoadColors(f, colors);
+                if (!f.Contains(".json"))
+                {
+                    Console.WriteLine("    - File: " + f);
+                    string file = f.Split('\\')[1]; // Remove directory\
+                    LoadColors(f, colors);
+                }
+                else
+                {
+
+                }
             }
             WriteData(colors, directory);
 
@@ -298,11 +329,7 @@ namespace VagantePalette
 
         static void SerializePalettes(string path)
         {
-            var settings = new JsonSerializerSettings { Formatting = Formatting.Indented, };
-            settings.Converters.Add(new PaletteConverter());
-
-            using (FileStream file = File.Open(path, FileMode.Open))
-            using (StreamWriter streamWriter = new StreamWriter(file))
+            using (StreamWriter streamWriter = new StreamWriter(path))
             using (JsonWriter jsonWriter = new JsonTextWriter(streamWriter)
             {
                 Formatting = Formatting.Indented,
